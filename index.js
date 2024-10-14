@@ -468,7 +468,7 @@ bot.on('callback_query', async (query) => {
                 🌐 Статус: ${offerInfo.isExpired ? 'Подписка истекла ❌' : 'Подписка действует ✔️'}/n/n
                 💻 Вы можете подключить любое количество устройств/n/n
                 ℹ️ Название подписки: ${offerInfo.subName}/n/n
-                📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : offerInfo.subDataGBLimit} ГБ/n/n
+                📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : FormatBytes(offerInfo.subDataGBLimit)} ГБ/n/n
                 ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
                 📅 Дата окончания: ${offerInfo.subDateLimit}/n/n
@@ -744,7 +744,7 @@ async function createNewoffer(state, onlyConnection){
                 🌐 Статус: ${offerInfo.isExpired ? 'Подписка истекла ❌' : 'Подписка действует ✔️'}/n/n
                 💻 Вы можете подключить любое количество устройств/n/n
                 ℹ️ Название подписки: ${offerInfo.subName}/n/n
-                📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : offerInfo.subDataGBLimit} ГБ/n/n
+                📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : FormatBytes(offerInfo.subDataGBLimit)} ГБ/n/n
                 ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
                 📅 Дата окончания: ${offerInfo.subDateLimit}/n/n
