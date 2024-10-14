@@ -469,6 +469,7 @@ bot.on('callback_query', async (query) => {
                 💻 Вы можете подключить любое количество устройств/n/n
                 ℹ️ Название подписки: ${offerInfo.subName}/n/n
                 📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : offerInfo.subDataGBLimit} ГБ/n/n
+                ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
                 📅 Дата окончания: ${offerInfo.subDateLimit}/n/n
                 ℹ️ Создан: ${offerInfo.createdDate}/n/n
@@ -744,6 +745,7 @@ async function createNewoffer(state, onlyConnection){
                 💻 Вы можете подключить любое количество устройств/n/n
                 ℹ️ Название подписки: ${offerInfo.subName}/n/n
                 📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : offerInfo.subDataGBLimit} ГБ/n/n
+                ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
                 📅 Дата окончания: ${offerInfo.subDateLimit}/n/n
                 ℹ️ Создан: ${offerInfo.createdDate}/n/n
