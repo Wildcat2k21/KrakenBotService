@@ -554,7 +554,9 @@ bot.on('callback_query', async (query) => {
             }
 
             //получение имеющиъся подписок
-            state.subData = await APIserver.GET_SUBS();
+            const allSubs = await APIserver.GET_SUBS();
+            const sortedByPriceSubs = allSubs.sort((a, b) => b.price - a.price);
+            state.subData = sortedByPriceSubs;
 
             //установка имеющихся подписок
             state.options = Buttons([...state.subData.map(sub => ([
