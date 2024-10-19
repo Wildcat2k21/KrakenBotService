@@ -542,7 +542,7 @@ bot.on('callback_query', async (query) => {
             const traficPerTime = truthTraffic/dateDiff;
             const estimateTrafic = traficPerTime * 2592000;
             const propareSubs =  (await APIserver.GET_SUBS()).map(item => item.data_limit === 0 ? {...item, data_limit: Infinity} : {...item, data_limit: item.data_limit * 1024 ** 3});
-            const recomendSub = propareSubs.filter(item => item.data_limit > estimateTrafic && item.name_id !== 'free').sort((a, b) => a - b)[0];
+            const recomendSub = propareSubs.filter(item => item.data_limit > estimateTrafic && item.name_id !== 'free').sort((a, b) => a.date_limit - b.date_limit)[0];
             const message = `
                 ℹ️ Исходя из использованного вами трафика за ${TextDayFormat(Math.ceil(dateDiff/86400)).toLowerCase()} 
                 при среднем расходе ${FormatBytes(traficPerTime * 24 * 3600)} за 1 день, ваш расход в месяц составит 
