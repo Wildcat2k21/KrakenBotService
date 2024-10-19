@@ -13,6 +13,7 @@ const APIserver = require('./modules/APIserver');
 
 //конфигурация
 let config = require('./config.json');
+const Time = require('./modules/Time');
 
 //основная настройка
 const app = express();
@@ -68,16 +69,9 @@ app.post('/notify' , (req, res) => {
     
                     //оповещение о принятии или отклонении заявки
                     notify.options = Buttons([[
-                        { text: '✅ Принять', callback_data: 'accept offer' },
-                        { text: '❌ Отклонить', callback_data: 'reject offer' },
+                        { text: '✅ Принять', callback_data: `AcceptOffer=${control.offer_id}` },
+                        { text: '❌ Отклонить', callback_data: `RejectOffer=${control.offer_id}` },
                     ]])
-
-                    //установка действия для администратора
-                    adminState.action = 'accept offer';
-
-                    adminState.data = {
-                        offerToAccept: control.offer_id
-                    }
                 }
 
                 //управление входящими заявками
@@ -198,115 +192,159 @@ const server = app.listen(PORT, async () => {
     WriteInLogFile(`Сервер запущен на порту ${PORT} 👂`);
 });
 
-//отправляем кнопки при команде /start
-bot.onText(/\/start\s?(.*)/, async (msg, match) => {
-
+async function initProperties(sender, refCode){
+    
     //идентификатор пользователя
-    const telegramId = msg.from.id;
-
-    //поиск инициализации диалога
-    const state = userStates.find(item => item.telegramId === telegramId);
-
-    if(state) return;
+    const telegramId = sender.id;
 
     //приветственное сообщение для администратора
-    if(msg.from.id === ADMIN_TELEGRAN_ID){
-        bot.sendMessage(telegramId, `Администратор распознан. Вы будете получать уведомления о новых пользователях, 
+    if(sender.id === ADMIN_TELEGRAN_ID){
+        await bot.sendMessage(telegramId, `Администратор распознан. Вы будете получать уведомления о новых пользователях, 
         заявках и прочую информацию`.format());
     }
 
-    try{
-        let userData = null;
+    let userData = null;
 
-        //поиск пользователя
-        userData = await APIserver.FIND_USER(telegramId);
+    //поиск пользователя
+    userData = await APIserver.FIND_USER(telegramId);
 
-        //если пользователь найден
-        if(userData){
+    //если пользователь найден
+    if(userData){
 
-            //новое сосотояние
-            const options = mainMenuOptions();
-            const userState = STATE({telegramId, data : {}, action: null, step: null, options, telegram: userData.telegram})
+        //новое сосотояние
+        const options = mainMenuOptions();
+        const userState = STATE({telegramId, data : {}, action: null, step: null, options, telegram: userData.telegram})
 
-            //инициализация пустого сценария
-            userStates.push(userState);
-            bot.sendMessage(telegramId, `Рады вас видеть! ${userData.nickname} 👋👋👋`, options);
+        bot.sendMessage(telegramId, `Рады вас видеть! ${userData.nickname} 👋👋👋`, options);
 
-        }
-        //приветственное сообщение от сервера
-        else {
+        //инициализация пустого сценария
+        userStates.push(userState);
 
-            //проверка на наличие имени пользователя в телеграм
-            if(!msg.from.username){
-                bot.sendMessage(telegramId, `Похоже, что вы не указали имя в телеграм при регистрации ℹ️/n/n
-                    Ваше имя будет использоваться для удобства связи с вами в случае необходимости. 
-                    Откройте настройки, и укажите его в графе "Имя пользователя", чтобы продолжить./n/n
-                    ⚙️ Настройки ➡️ Имя пользователя
-                `.format(), Buttons([[
-                    {text: 'Готово 👌', callback_data: 'new offer'}
-                ]]));
+        return
 
-                return
-            }
-
-            //регистрация пользователя
-            const registrationData = {
-                telegram: msg.from.username,
-                nickname: msg.from.first_name,
-                telegram_id: telegramId
-            }
-
-            //получение инвайта
-            if(match[1]){
-                //проверка на существование инвайта
-                const userWithThisInvite = await APIserver.FIND_USER_WITH_INVITE(match[1]);
-
-                //установка кода приглашения
-                if(userWithThisInvite){
-                    registrationData.invited_with_code = match[1];
-                }
-            }
-
-            // регистрация пользователя
-            await APIserver.NEW_USER(registrationData);
-
-            //конфигурация
-            const apiServerConfig = await APIserver.GET_CONF();
-
-            //опции для пользователя
-            const options = mainMenuOptions();
-
-            //новое сосотояние
-            const userState = STATE({telegramId, telegram: msg.from.username, data : {
-                sub_id: 'free',
-                user_id: telegramId
-            }, action: null, step: null, options});
-
-            //добавление сценария
-            userStates.push(userState);
-
-            //получение строки подключения
-            const connection = await createNewoffer(userState, true);
-
-            bot.sendMessage(telegramId, apiServerConfig.welcome_message + `/n/n
-            <b>Ваша строка для подключения к VPN 🔥</b>/n
-            <pre><code>
-                ${connection}
-            </code></pre>/n/n
-            Если не подключались ранее, выберите опцию <b>"Как подключится"</b> ниже 👇
-            `.format(), options);
-        }
     }
-    catch(err){
-        //обработка ошибок axios
-        if(err.response && typeof err.response.data === 'string'){
-            bot.sendMessage(telegramId, err.response.data);
+    //приветственное сообщение от сервера
+    else {
+
+        //проверка на наличие имени пользователя в телеграм
+        if(!sender.username){
+            await bot.sendMessage(telegramId, `Похоже, что вы не указали имя в телеграм при регистрации ℹ️/n/n
+                Ваше имя будет использоваться для удобства связи с вами в случае необходимости. 
+                Откройте настройки, и укажите его в графе "Имя пользователя", чтобы продолжить./n/n
+                ⚙️ Настройки ➡️ Имя пользователя
+            `.format(), Buttons([[
+                {text: 'Готово 👌', callback_data: 'new offer'}
+            ]]));
+
             return
         }
 
+        //регистрация пользователя
+        const registrationData = {
+            telegram: sender.username,
+            nickname: sender.first_name,
+            telegram_id: telegramId
+        }
+
+        //получение инвайта
+        if(refCode){
+            //проверка на существование инвайта
+            const userWithThisInvite = await APIserver.FIND_USER_WITH_INVITE(refCode);
+
+            //установка кода приглашения
+            if(userWithThisInvite){
+                registrationData.invited_with_code = refCode;
+            }
+        }
+
+        // регистрация пользователя
+        await APIserver.NEW_USER(registrationData);
+
+        //конфигурация
+        const apiServerConfig = await APIserver.GET_CONF();
+
+        //опции для пользователя
+        const options = mainMenuOptions();
+
+        //новое сосотояние
+        const userState = STATE({telegramId, telegram: sender.username, data : {
+            sub_id: 'free',
+            user_id: telegramId
+        }, action: null, step: null, options});
+
+        //добавление сценария
+        userStates.push(userState);
+
+        //получение строки подключения
+        const connection = await createNewoffer(userState, true);
+
+        bot.sendMessage(telegramId, apiServerConfig.welcome_message + `/n/n
+        <b>Ваша строка для подключения к VPN 🔥</b>/n
+        <pre><code>
+            ${connection}
+        </code></pre>/n/n
+        Если не подключались ранее, выберите опцию <b>"Как подключится"</b> ниже 👇
+        `.format(), options);
+
+        return
+    }
+}
+
+//обработка соощений от пользователя
+bot.on('message', async (msg) => {
+
+    //идентификатор пользователя
+    let state, telegramId = msg.from.id;
+
+    try{
+        //реферальный код и проверка состояния
+        const refCode = msg.text.match(/\/start\s?(.*)/g) ? msg.text.split(' ')[1] : null;
+        state = userStates.find(item => item.telegramId === telegramId);
+
+        if(!state) return await initProperties(msg.from, refCode);
+
+        //ввод промокода пользователем
+        if(state.action === 'awaiting promocode'){
+
+            //проверка на длинну промокода
+            if(msg.text.length > 10) {
+                bot.sendMessage(telegramId, 'Введенный промокод слишком длинный 🔂', state.options);
+                return
+            }
+
+            state.data.promo_id = msg.text;
+            return await createNewoffer(state);
+        }
+
+        //сообщение по умолчанию
+        bot.sendMessage(telegramId, '❓Команда не распознана', state.options);
+    }
+    catch(err){
+
+        //лог ошибки
         WriteInLogFile(err);
+
+        //обработка ошибок axios
+        if(err.response && typeof err.response.data === 'string'){
+
+            //проверка промокода
+            if(state && state.action === 'awaiting promocode' && err.response.data.startsWith('Промокод')){
+                bot.sendMessage(telegramId, err.response.data + ' 🔂', state.options);
+                return
+            }
+
+            const errorStatusMess = `${err.response.status} ${err.response.statusText}`;
+        
+            if(state) state.default();
+
+            bot.sendMessage(telegramId, err.response.data || errorStatusMess);
+            return;
+        }
+
+        //сброс сосотояния
+        if(state) state.default();
+
         bot.sendMessage(telegramId, config.default_error_message);
-        return;
     }
 });
   
@@ -314,30 +352,25 @@ bot.onText(/\/start\s?(.*)/, async (msg, match) => {
 bot.on('callback_query', async (query) => {
 
     //телеграм пользователя
-    const telegramId = query.from.id;
-    
-    //получаем индекс и состояние пользователя
-    const state = userStates.find((item) => item.telegramId === telegramId);
-
-    //не продолжать сценарий без начала диалога
-    if(!state){
-        bot.sendMessage(telegramId, 'Выполните команду /start, чтобы начать.');
-        return
-    };
+    let state, telegramId = query.from.id;
 
     try{
+
+        //проверка состояния
+        state = userStates.find(item => item.telegramId === telegramId);
+
+        if(!state) return await initProperties(query.from);
+
         //принятие новой заявки
-        if(state.telegramId === ADMIN_TELEGRAN_ID && state.action === 'accept offer' && query.data === 'accept offer' ){
-            await APIserver.ACCEPT_OFFER(state.data.offerToAccept);
-            state.default();
-            return;
+        if(state.telegramId === ADMIN_TELEGRAN_ID && query.data.match('AcceptOffer=')){
+            const offerId = query.data.split('=')[1];
+            return await APIserver.ACCEPT_OFFER(offerId);
         }
 
         //отклонение новой заявки
-        if(state.telegramId === ADMIN_TELEGRAN_ID && state.action === 'accept offer' && query.data === 'reject offer' ){
-            await APIserver.REJECT_OFFER(state.data.offerToAccept);
-            state.default();
-            return;
+        if(state.telegramId === ADMIN_TELEGRAN_ID && query.data.match('RejectOffer=')){
+            const offerId = query.data.split('=')[1];
+            return await APIserver.REJECT_OFFER(offerId);
         }
 
         //подтверждение оплаты 
@@ -451,7 +484,13 @@ bot.on('callback_query', async (query) => {
                     Трафик — ${!offerInfo.subDataGBLimit  ? 'ထ' : offerInfo.subDataGBLimit} ГБ / Мес/n
                     Срок — ${TextDayFormat(offerInfo.subDateLimit / 86400)}/n/n
                     <b>ℹ️ Вы также получите уведомление после обработки заявки </b>
-                `.format(), state.options);
+                `.format(), new Buttons([[{
+                    text: 'Отменить заявку ❌',
+                    callback_data: `RejectOffer=${offerInfo.offerId}`
+                }],[{
+                    text: 'На главную 🔙',
+                    callback_data: 'main menu'
+                }]]));
                 return
             }
 
@@ -471,8 +510,8 @@ bot.on('callback_query', async (query) => {
                 📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : FormatBytes(offerInfo.subDataGBLimit)} ГБ/n/n
                 ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
-                📅 Дата окончания: ${offerInfo.subDateLimit}/n/n
-                ℹ️ Создан: ${offerInfo.createdDate}/n/n
+                📅 Дата окончания: ${new Time(offerInfo.subDateLimit).toFriendlyString()}/n/n
+                ℹ️ Создан: ${new Time(offerInfo.createdDate).toFriendlyString()}/n/n
                 ${
                     offerInfo.price === 0 ? '<b>При оформлении платной подписки вам доступна реферальня ссылка.</b> ' :
                     `<b>Пригласите друга по этой реферальной ссылке 👇</b>/n
@@ -489,9 +528,30 @@ bot.on('callback_query', async (query) => {
 
         //если пользователь отказался от промокода
         if(query.data === 'no promocode' && state.telegram){
-            await createNewoffer(state);
-            state.default();
-            return
+            state.action = "";
+            return await createNewoffer(state);
+        }
+
+        //помощь в выборе подписки
+        if(query.data === 'help subscribe' && state.telegram){
+            const offerData = await APIserver.GET_OFFER_INFO(telegramId);
+            const timeNow = new Time().shortUnix();
+            const dateDiff = (timeNow < offerData.subDateLimit ? timeNow : offerData.subDateLimit) - offerData.createdDate;
+            const traficPerTime = offerData.usedTraffic/dateDiff;
+            const estimateTrafic = traficPerTime * 2592000;
+            
+            const recomendSub = (await APIserver.GET_SUBS()).sort((a, b) => a.date_limit - estimateTrafic).filter(item => item.name_id !== 'free')[0]
+
+            const message = `
+                ℹ️ Исходя из использованного вами трафика за ${TextDayFormat(Math.ceil(dateDiff/86400)).toLowerCase()} 
+                при среднем расходе ${FormatBytes(traficPerTime)} за 1 день, ваш расход в месяц составит 
+                приблизительно ${FormatBytes(estimateTrafic)}/n/n
+                ✔️ <b>Для комфортного использования VPN рекомендуем вам подписку "${recomendSub.name_id}" 
+                с трафиком ${recomendSub.data_limit === 0 ? 'ထ' : recomendSub.data_limit} ГБ  
+                на срок ${TextDayFormat(recomendSub.date_limit/86400)}</b>
+            `.format();
+
+            return await bot.sendMessage(telegramId, message, state.options);
         }
 
         //обработка выбранной подписки
@@ -522,9 +582,7 @@ bot.on('callback_query', async (query) => {
                     `.format());
                 }
                
-                await createNewoffer(state);
-                state.default();
-                return
+                return await createNewoffer(state);
             }
             //если промокод поддерживается
             else{
@@ -570,9 +628,12 @@ bot.on('callback_query', async (query) => {
                     `.format(),
                     callback_data: `sub=${sub.name_id}`
                 }])), [{
-                    text: 'Вернуться на главную ❌',
-                    callback_data: 'main menu'
-            }]]);
+                    text: 'Какую подписку мне выбрать ❓',
+                    callback_data: 'help subscribe'
+            }],[{
+                text: 'Вернуться на главную 🔙',
+                callback_data: 'main menu'
+        }]]);
 
             //более развернутое сообщение о подписках
             bot.sendMessage(telegramId, `Выберите подписку 👇/n/n`.format(), state.options);
@@ -582,70 +643,17 @@ bot.on('callback_query', async (query) => {
     catch(err){
 
         //сброс сосотояния
-        state.default();
+        if(state) state.default();
+
+        WriteInLogFile(err);
 
         //обработка ошибок axios
         if(err.response && typeof err.response.data === 'string'){
-            bot.sendMessage(telegramId, err.response.data, state.options);
+            const errorStatusMess = `${err.response.status} ${err.response.statusText}`;
+            bot.sendMessage(telegramId, err.response.data || errorStatusMess);
             return;
         }
 
-        WriteInLogFile(err);
-        bot.sendMessage(telegramId, config.default_error_message);
-    }
-});
-
-//обработка соощений от пользователя
-bot.on('message', async (msg) => {
-
-    //идентификатор пользователя
-    const telegramId = msg.from.id;
-    const state = userStates.find(item => item.telegramId === telegramId);
-    
-    //проверка на начатый диалог
-    if(!state){
-        bot.sendMessage(telegramId, 'Выполните команду /start, чтобы начать');
-        return
-    };
-
-    try{        
-        //ввод промокода пользователем
-        if(state.action === 'awaiting promocode'){
-
-            //проверка на длинну промокода
-            if(msg.text.length > 10) {
-                bot.sendMessage(telegramId, 'Введенный промокод слишком длинный 🔂', state.options);
-                return
-            }
-
-            state.data.promo_id = msg.text;
-            await createNewoffer(state);
-            state.default();
-            return
-        }
-
-        //сообщение по умолчанию
-        bot.sendMessage(telegramId, '❓Команда не распознана.', state.options);
-    }
-    catch(err){
-        //обработка ошибок axios
-        if(err.response && typeof err.response.data === 'string'){
-
-            //проверка промокода
-            if(state.action === 'awaiting promocode' && err.response.data.startsWith('Промокод')){
-                bot.sendMessage(telegramId, err.response.data + ' 🔂', state.options);
-                return
-            }
-        
-            state.default();
-            bot.sendMessage(telegramId, err.response.data, state.options);
-            return;
-        }
-
-        //сброс сосотояния
-        state.default();
-
-        WriteInLogFile(err);
         bot.sendMessage(telegramId, config.default_error_message);
     }
 });
@@ -685,7 +693,7 @@ function instructionOptions(){
 
     //добавление выхода
     line_keybrd.push([{
-        text : 'Вернуться на главную ❌',
+        text : 'Вернуться на главную 🔙',
         callback_data: 'main menu'
     }])
 
@@ -747,8 +755,8 @@ async function createNewoffer(state, onlyConnection){
                 📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : FormatBytes(offerInfo.subDataGBLimit)} ГБ/n/n
                 ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
-                📅 Дата окончания: ${offerInfo.subDateLimit}/n/n
-                ℹ️ Создан: ${offerInfo.createdDate}/n/n
+                📅 Дата окончания: ${new Time(offerInfo.subDateLimit).toFriendlyString()}/n/n
+                ℹ️ Создан: ${new Time(offerInfo.createdDate).toFriendlyString()}/n/n
                 <b>🔥 При приобритении платной подписки вам доступна реферальная ссылка</b>/n/n
                 За каждого приглашенного друга этой ссылке, вы получаете скидку <b>${apiServerConfig.invite_discount}%</b> на следующую оплату, друг — <b>${apiServerConfig.for_invited_discount}%</b>/n/n
                 За двух приглашенных друзей — <b><u>бесплатный месяц на любой тариф 🎁</u></b>
@@ -785,7 +793,7 @@ async function createNewoffer(state, onlyConnection){
 
         //проверка на ошибку переоформления пробной подписки
         if(err.response && typeof err.response.data === 'string' && err.response.data.startsWith('Пробная подписка')){
-            state.default();
+            if(state) state.default();
             bot.sendMessage(telegramId, 'Пробная подписка доступна только на первый заказ ℹ️', state.options);
             return
         }
