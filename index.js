@@ -546,7 +546,7 @@ bot.on('callback_query', async (query) => {
 
             const message = `
                 ℹ️ Исходя из использованного вами трафика за ${TextDayFormat(Math.ceil(dateDiff/86400)).toLowerCase()} 
-                при среднем расходе ${FormatBytes(traficPerTime)} за 1 день, ваш расход в месяц составит 
+                при среднем расходе ${FormatBytes(traficPerTime * 24 * 3600)} за 1 день, ваш расход в месяц составит 
                 приблизительно ${FormatBytes(estimateTrafic)}/n/n
                 ✔️ <b>Для комфортного использования VPN рекомендуем вам подписку "${recomendSub.title}" 
                 с трафиком ${recomendSub.data_limit === Infinity ? 'ထ' : recomendSub.data_limit} ГБ  
