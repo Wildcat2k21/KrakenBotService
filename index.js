@@ -541,14 +541,14 @@ bot.on('callback_query', async (query) => {
             const truthTraffic = (offerData.subDataGBLimit * 1024 ** 3 - offerData.dataLimit) + offerData.usedTraffic;
             const traficPerTime = truthTraffic/dateDiff;
             const estimateTrafic = traficPerTime * 2592000;
-            const propareSubs = (await APIserver.GET_SUBS()).map(item => item.date_limit === 0 ? {date_limit: Infinity, ...item} : item);
-            const recomendSub = Math.min(...propareSubs.filter(item => item.date_limit > estimateTrafic && item.name_id !== 'free'));
+            const propareSubs = (await APIserver.GET_SUBS()).map(item => item.data_limit === 0 ? {data_limit: Infinity, ...item} : item);
+            const recomendSub = Math.min(...propareSubs.filter(item => item.data_limit > estimateTrafic && item.name_id !== 'free'));
 
             const message = `
                 ℹ️ Исходя из использованного вами трафика за ${TextDayFormat(Math.ceil(dateDiff/86400)).toLowerCase()} 
                 при среднем расходе ${FormatBytes(traficPerTime)} за 1 день, ваш расход в месяц составит 
                 приблизительно ${FormatBytes(estimateTrafic)}/n/n
-                ✔️ <b>Для комфортного использования VPN рекомендуем вам подписку "${recomendSub.name_id}" 
+                ✔️ <b>Для комфортного использования VPN рекомендуем вам подписку "${recomendSub.title}" 
                 с трафиком ${recomendSub.data_limit === Infinity ? 'ထ' : recomendSub.data_limit} ГБ  
                 на срок ${TextDayFormat(recomendSub.date_limit/86400)}</b>
             `.format();
