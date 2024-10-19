@@ -508,7 +508,7 @@ bot.on('callback_query', async (query) => {
                 🌐 Статус: ${offerInfo.isExpired ? 'Подписка истекла ❌' : 'Подписка действует ✔️'}/n/n
                 💻 Вы можете подключить любое количество устройств/n/n
                 ℹ️ Название подписки: ${offerInfo.subName}/n/n
-                📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : FormatBytes(offerInfo.subDataGBLimit)} ГБ/n/n
+                📶 Трафик: ${!offerInfo.dataLimit  ? 'ထ' : FormatBytes(offerInfo.dataLimit / 1024 ** 3)} ГБ/n/n
                 ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
                 📅 Дата окончания: ${new Time(offerInfo.subDateLimit).toFriendlyString()}/n/n
@@ -538,17 +538,18 @@ bot.on('callback_query', async (query) => {
             const offerData = await APIserver.GET_OFFER_INFO(telegramId);
             const timeNow = new Time().shortUnix();
             const dateDiff = (timeNow < offerData.subDateLimit ? timeNow : offerData.subDateLimit) - offerData.createdDate;
-            const traficPerTime = offerData.usedTraffic/dateDiff;
+            const truthTraffic = (offerData.subDataGBLimit * 1024 ** 3 - offerData.dataLimit) + offerData.usedTraffic;
+            const traficPerTime = truthTraffic/dateDiff;
             const estimateTrafic = traficPerTime * 2592000;
-            
-            const recomendSub = (await APIserver.GET_SUBS()).sort((a, b) => a.date_limit - estimateTrafic).filter(item => item.name_id !== 'free')[0]
+            const propareSubs = (await APIserver.GET_SUBS()).map(item => item.date_limit === 0 ? {date_limit: Infinity, ...item} : item);
+            const recomendSub = Math.min(...propareSubs.filter(item => item.date_limit > estimateTrafic && item.name_id !== 'free'));
 
             const message = `
                 ℹ️ Исходя из использованного вами трафика за ${TextDayFormat(Math.ceil(dateDiff/86400)).toLowerCase()} 
                 при среднем расходе ${FormatBytes(traficPerTime)} за 1 день, ваш расход в месяц составит 
                 приблизительно ${FormatBytes(estimateTrafic)}/n/n
                 ✔️ <b>Для комфортного использования VPN рекомендуем вам подписку "${recomendSub.name_id}" 
-                с трафиком ${recomendSub.data_limit === 0 ? 'ထ' : recomendSub.data_limit} ГБ  
+                с трафиком ${recomendSub.data_limit === Infinity ? 'ထ' : recomendSub.data_limit} ГБ  
                 на срок ${TextDayFormat(recomendSub.date_limit/86400)}</b>
             `.format();
 
@@ -753,7 +754,7 @@ async function createNewoffer(state, onlyConnection){
                 🌐 Статус: ${offerInfo.isExpired ? 'Подписка истекла ❌' : 'Подписка действует ✔️'}/n/n
                 💻 Вы можете подключить любое количество устройств/n/n
                 ℹ️ Название подписки: ${offerInfo.subName}/n/n
-                📶 Трафик: ${!offerInfo.subDataGBLimit  ? 'ထ' : FormatBytes(offerInfo.subDataGBLimit)} ГБ/n/n
+                📶 Трафик: ${!offerInfo.dataLimit  ? 'ထ' : FormatBytes(offerInfo.dataLimit / 1024 ** 3)} ГБ/n/n
                 ${(offerInfo.limitDiffrence ? '➗ Трафик перерасчитан с учетом обновления QR-кода/n/n' : '')}
                 ℹ️ Использовано: ${FormatBytes(offerInfo.usedTraffic)}/n/n
                 📅 Дата окончания: ${new Time(offerInfo.subDateLimit).toFriendlyString()}/n/n
