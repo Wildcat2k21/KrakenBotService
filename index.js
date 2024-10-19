@@ -542,7 +542,7 @@ bot.on('callback_query', async (query) => {
             const traficPerTime = truthTraffic/dateDiff;
             const estimateTrafic = traficPerTime * 2592000;
             const propareSubs = (await APIserver.GET_SUBS()).map(item => item.data_limit === 0 ? {data_limit: Infinity, ...item} : item);
-            const recomendSub = Math.min(...propareSubs.filter(item => item.data_limit > estimateTrafic && item.name_id !== 'free'));
+            const recomendSub = Math.min(...propareSubs.filter(item => item.data_limit * 1024 ** 3 > estimateTrafic && item.name_id !== 'free'));
 
             const message = `
                 ℹ️ Исходя из использованного вами трафика за ${TextDayFormat(Math.ceil(dateDiff/86400)).toLowerCase()} 
