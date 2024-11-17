@@ -1,0 +1,24 @@
+{
+  "name": "telegram-service",
+  "version": "1.0.0",
+  "description": "telegram bot krakenVPN",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "proxy",
+    "vpn"
+  ],
+  "author": "wildcat2k21",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "qrcode": "^1.5.4"
+  }
+}
