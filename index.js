@@ -532,8 +532,12 @@ bot.on('callback_query', async (query) => {
                 return
             }
 
+            console.log(123);
+
             //получение информации о заявке
             const offerInfo = await APIserver.GET_OFFER_INFO(telegramId);
+
+            console.log(321);
 
             //ограничение по просмотру статистики 1 раз в 30 минут
             state._callTimeoutLimit(300000, 'offer info', 3);
