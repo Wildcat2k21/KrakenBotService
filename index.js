@@ -1,3 +1,5 @@
+//!!! ПРИМЕЧАНИЕ НЕ РАБОТАЕТ APIserver.GET_CONF на СТАЙБЛ ВЕРСИИ
+
 const QRCode = require('qrcode');
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
@@ -261,7 +263,8 @@ async function initProperties(sender, refCode){
         await APIserver.NEW_USER(registrationData);
 
         //конфигурация
-        const apiServerConfig = await APIserver.GET_CONF();
+        // const apiServerConfig = await APIserver.GET_CONF();
+        const welcome_message = "<b>🤝 Мы получаем ежедневно много хвалебных отзывов о наших проектах и рады вам представить не публичный, надежный VPN</b>\n\n<b>✔️ Не публичный, надежный и приватный</b>\n\n<b>✔️ Любое количество устройств без дополнительной платы</b>\n\n<b>✔️ Не скрываем трафик, и предоставляем больший объем</b>\n\n<b>🎁 Бесплатные подписки, промокоды и скидки за приглашение</b>\n\n<b>Вступайте в нашу группу</b>, чтобы узнавать о релизах первыми, новости, розыгрыши, парнерство, обход ограничений — <a href='https://t.me/lightvpn_test'>Kraken Project 🔱</a>";
 
         //опции для пользователя
         const options = mainMenuOptions(telegramId);
@@ -278,7 +281,7 @@ async function initProperties(sender, refCode){
         //получение строки подключения
         //const connection = await createNewoffer(userState, true);
 
-        bot.sendMessage(telegramId, apiServerConfig.welcome_message, options);
+        bot.sendMessage(telegramId, welcome_message, options);
 
         // + `/n/n
         // <b>Ваша строка для подключения к VPN 🔥</b>/n
@@ -553,12 +556,8 @@ bot.on('callback_query', async (query) => {
             // Генерация QR-кода
             const qrCodeBuffer = await QRCode.toBuffer(offerInfo.connString, { type: 'png' });
 
-            console.log(123);
-
             //конфигурация сервера
-            const apiServerConfig = await APIserver.GET_CONF();
-
-            console.log(321);
+            // const apiServerConfig = await APIserver.GET_CONF();
 
             //отправка сообщения с данными
             await bot.sendPhoto(telegramId, qrCodeBuffer, { caption: `QR-код для подключения по вашей подписке./n/n
@@ -817,8 +816,8 @@ async function createNewoffer(state, onlyConnection){
             // Получение информации по подписке
             const offerInfo = await APIserver.GET_OFFER_INFO(telegramId);
 
-            //конфигурация сервера
-            const apiServerConfig = await APIserver.GET_CONF();
+            // //конфигурация сервера
+            // const apiServerConfig = await APIserver.GET_CONF();
 
             //отправка сообщения с данными
             await bot.sendPhoto(telegramId, qrCodeBuffer, { caption: `QR-код для подключения по вашей подписке./n/n
