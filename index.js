@@ -532,8 +532,6 @@ bot.on('callback_query', async (query) => {
                 return
             }
 
-            console.log(123);
-
             //получение информации о заявке
             const offerInfo = await APIserver.GET_OFFER_INFO(telegramId);
 
@@ -552,15 +550,15 @@ bot.on('callback_query', async (query) => {
                 }]]));
             }
 
-            console.log(offerInfo);
-
             // Генерация QR-кода
             const qrCodeBuffer = await QRCode.toBuffer(offerInfo.connString, { type: 'png' });
 
-            console.log('after');
+            console.log(123);
 
             //конфигурация сервера
-            // const apiServerConfig = await APIserver.GET_CONF();
+            const apiServerConfig = await APIserver.GET_CONF();
+
+            console.log(321);
 
             //отправка сообщения с данными
             await bot.sendPhoto(telegramId, qrCodeBuffer, { caption: `QR-код для подключения по вашей подписке./n/n
