@@ -92,7 +92,6 @@ class APIserver {
             params: {telegram_id}
         });
 
-        console.log(response.data);
         return response.data;
     }
 
